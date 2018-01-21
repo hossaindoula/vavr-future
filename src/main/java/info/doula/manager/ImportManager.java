@@ -3,6 +3,7 @@ package info.doula.manager;
 import info.doula.AsyncConfiguration;
 import info.doula.util.ImmutableMap;
 import io.vavr.concurrent.Future;
+import io.vavr.control.Option;
 import io.vavr.control.Try;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
@@ -52,7 +53,7 @@ public class ImportManager {
 
     ///CompletableFuture<Optional<Map<String, Object>>>
     @Async(AsyncConfiguration.TASK_EXECUTOR_SERVICE)
-    public CompletableFuture importVaultHolder(final MultipartFile csvFile) throws InterruptedException, ExecutionException {
+    public CompletableFuture<Option<Map<String, Object>>> importVaultHolder(final MultipartFile csvFile) throws InterruptedException, ExecutionException {
         return CompletableFuture.supplyAsync(() -> Optional.ofNullable(
                 Future.of(csvFile::getBytes)
                         .filterTry(content -> getTikaParser().detect(new ByteArrayInputStream(content)).equals(TXT_TYP)
@@ -62,7 +63,7 @@ public class ImportManager {
                         .onFailure(throwable -> singletonList(ImmutableMap.of(ERROR, "problem to process csv file")))
                         .mapTry(fileStream -> new BufferedReader(new InputStreamReader(fileStream)))
                         .flatMap(bufferedReader -> Future.of(bufferedReader::lines))
-                        .mapTry(stringStream -> Try.of(() -> getValues(stringStream))
+                        .mapTry(stringStream -> Try.of(() -> sponsorRepValues(stringStream))
                                 .onFailure(throwable -> Try.of())
                         ).onFailure(throwable -> ImmutableMap.of(ERROR, "Failed to import"))
         ));
@@ -72,10 +73,17 @@ public class ImportManager {
         return new Tika();
     }
 
-    private List<Map<String, String>> getValues(Stream<String> stringStream) {
+    private List<Map<String, String>> sponsorRepValues(Stream<String> stringStream) {
         return stringStream.skip(1).map(s -> s.split(","))
                 .filter(l -> l.length == 7).collect(toList()).stream()
                 .map(m -> ImmutableMap.of(FIRST_NAME, m[0], LAST_NAME, m[1], EMAIL, m[2],
                         SPONSOR_CODE, m[3], PACKAGE_ID, m[4], SPONSOR_REP, m[5], SEND_EMAIL, m[6])).collect(toList());
+    }
+
+    private List<Map<String, String>> withoutSponsorValues(Stream<String> stringStream) {
+        return stringStream.skip(1).map(s -> s.split(","))
+                .filter(l -> l.length == 6).collect(toList()).stream()
+                .map(m -> ImmutableMap.of(FIRST_NAME, m[0], LAST_NAME, m[1], EMAIL, m[2],
+                        SPONSOR_CODE, m[3], PACKAGE_ID, m[4], SEND_EMAIL, m[5])).collect(toList());
     }
 }

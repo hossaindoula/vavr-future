@@ -2,6 +2,7 @@ package info.doula.controller;
 
 import info.doula.AsyncConfiguration;
 import info.doula.manager.ImportManager;
+import io.vavr.control.Option;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -48,9 +49,9 @@ public class ImportResource {
         }
     }
 
-    protected Function<Optional<?>, ResponseEntity> mapMaybeToResponse = maybeUser -> maybeUser
+    protected Function<Option<?>, ResponseEntity> mapMaybeToResponse = maybeUser -> maybeUser
             .<ResponseEntity>map(ResponseEntity::ok)
-            .orElse(ResponseEntity.notFound().build());
+            .getOrElse(ResponseEntity.notFound().build());
 
     public Function<String, Function<Throwable, ResponseEntity>> handleGetUserFailure = userId ->
             throwable -> ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
