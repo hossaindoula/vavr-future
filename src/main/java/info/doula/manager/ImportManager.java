@@ -3,6 +3,7 @@ package info.doula.manager;
 import info.doula.AsyncConfiguration;
 import info.doula.util.ImmutableMap;
 import io.vavr.concurrent.Future;
+import io.vavr.control.Either;
 import io.vavr.control.Option;
 import io.vavr.control.Try;
 import org.springframework.scheduling.annotation.Async;
@@ -34,6 +35,12 @@ import static info.doula.AppConstant.SPONSOR_CODE;
 import static info.doula.AppConstant.SPONSOR_REP;
 import static info.doula.AppConstant.TXT_TYP;
 import static info.doula.AppConstant.XL_TYP;
+import static io.vavr.API.$;
+import static io.vavr.Patterns.*;
+import static io.vavr.Predicates.isIn;
+import static io.vavr.control.Try.run;
+import static io.vavr.API.Match;
+import static io.vavr.API.Match.Case;
 import static java.util.Collections.singletonList;
 import static java.util.stream.Collectors.toList;
 import static java.util.stream.Collectors.toMap;
@@ -80,10 +87,12 @@ public class ImportManager {
                         SPONSOR_CODE, m[3], PACKAGE_ID, m[4], SPONSOR_REP, m[5], SEND_EMAIL, m[6])).collect(toList());
     }
 
-    private List<Map<String, String>> withoutSponsorValues(Stream<String> stringStream) {
-        return stringStream.skip(1).map(s -> s.split(","))
-                .filter(l -> l.length == 6).collect(toList()).stream()
-                .map(m -> ImmutableMap.of(FIRST_NAME, m[0], LAST_NAME, m[1], EMAIL, m[2],
-                        SPONSOR_CODE, m[3], PACKAGE_ID, m[4], SEND_EMAIL, m[5])).collect(toList());
+    private Function<Integer, String>  withoutSponsorValues(List<String> stringStream) {
+        return Match(stringStream).of(
+                Case($(isIn(l -> l.length == 7)), o -> run(this::displayEven)),
+                Case($(isIn(1, 3, 5, 7, 9)), o -> run(this::displayOdd)),
+                Case($(), o -> run(() -> {
+                    throw new IllegalArgumentException(String.valueOf(i));
+                })));
     }
 }
